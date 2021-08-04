@@ -7,6 +7,7 @@ const wxss = require('./wxss')
 const compile = require('./compile')
 const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
+const mpxLoader = require('./mpxjs/webpack-plugin/loader')
 
 const componentMap = {}
 let nowLoad = null
@@ -136,6 +137,86 @@ function register(componentPath, tagName, cache, hasRegisterCache) {
 }
 
 /**
+ * 注册 MPX 组件
+ * @param componentPath
+ * @param tagName
+ * @param cache
+ * @param hasRegisterCache
+ * @returns {ComponentId<WechatMiniprogram.Component.DataOption, WechatMiniprogram.Component.PropertyOption, WechatMiniprogram.Component.MethodOption>|*}
+ */
+function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentContent) {
+  // 用于 wcc 编译器使用
+  window.__webview_engine_version__ = 0.02
+
+  if (typeof componentPath === 'object') {
+    // 直接传入定义对象
+    const definition = componentPath
+
+    return jComponent.register(definition)
+  }
+
+  if (typeof componentPath !== 'string') {
+    throw new Error('componentPath must be a string')
+  }
+
+  if (!tagName || typeof tagName !== 'string') {
+    tagName = 'main' // 默认标签名
+  }
+
+  const id = _.getId()
+
+  if (hasRegisterCache[componentPath]) return hasRegisterCache[componentPath]
+  hasRegisterCache[componentPath] = id
+
+  const component = {
+    id,
+    path: componentPath,
+    tagName,
+    json: componentContent.json,
+  }
+
+  if (!component.json) {
+    throw new Error(`invalid componentPath: ${componentPath}`)
+  }
+
+  // 先加载 using components
+  const rootPath = cache.options.rootPath
+  const usingComponents = component.json.usingComponents || {}
+  const overrideUsingComponents = cache.options.usingComponents || {}
+  const usingComponentKeys = Object.keys(usingComponents)
+  for (let i = 0, len = usingComponentKeys.length; i < len; i++) {
+    const key = usingComponentKeys[i]
+
+    if (Object.prototype.hasOwnProperty.call(overrideUsingComponents, key)) continue // 被 override 的跳过
+
+    const value = usingComponents[key]
+    const usingPath = _.isAbsolute(value) ? path.join(rootPath, value) : path.join(path.dirname(componentPath), value)
+    const id = register(usingPath, key, cache, hasRegisterCache)
+
+    usingComponents[key] = id
+  }
+  Object.assign(usingComponents, overrideUsingComponents)
+
+  // 读取自定义组件的静态内容
+  // component.wxml = compile.getWxml(componentPath, cache.options)
+  component.wxml = componentContent.template
+  // component.wxss = wxss.getContent(`${componentPath}.wxss`)
+  component.wxss = componentContent.style
+
+  // 存入需要执行的自定义组件 js
+  cache.needRunJsList.push([componentPath, component])
+
+  // 保存追加了已编译的 wxss
+  cache.wxss.push(wxss.compile(component.wxss, {
+    prefix: tagName,
+    ...cache.options,
+  }))
+
+  return component.id
+}
+
+
+/**
  * 加载自定义组件
  */
 function load(componentPath, tagName, options = {}) {
@@ -179,6 +260,62 @@ function load(componentPath, tagName, options = {}) {
     componentMap[id] = cache
 
     return id
+}
+
+/**
+ * 加载 Mpx 组件
+ * @param componentPath
+ * @param tagName
+ * @param options
+ */
+function loadMpx(componentPath, callback, tagName, options = {}) {
+  if (typeof tagName === 'object') {
+    options = tagName
+    tagName = ''
+  }
+
+  if (typeof componentPath === 'string') {
+    options = Object.assign({
+      compiler: 'official', // official - 官方编译器、simulate - 纯 js 实现的模拟编译器
+      rootPath: path.dirname(componentPath), // 项目根路径
+    }, options)
+  } else {
+    options = Object.assign({
+      compiler: 'simulate',
+      rootPath: '',
+    }, options)
+  }
+
+  const cache = {
+    wxss: [],
+    options,
+    needRunJsList: [],
+  }
+  const hasRegisterCache = {}
+
+  // TODO 使用mpx-loader内容处理mpx文件
+  const content = _.readFile(componentPath)
+  // mock webpack 以及 mpx 相关对象
+  this.cacheable = () => {}
+  let id = null
+  mpxLoader.call(this, content, componentPath, (output) => {
+    id = registerMpx(componentPath, tagName, cache, hasRegisterCache, output)
+
+    cache.needRunJsList.forEach(item => {
+      const oldLoad = nowLoad
+
+      nowLoad = item[1] // nowLoad 用于执行用户代码调用 Component 构造器时注入额外的参数给 j-component
+      nowLoad.pathToIdMap = hasRegisterCache
+      _.runJs('src/components/list.js')
+
+      nowLoad = oldLoad
+    })
+
+    callback(id)
+  })
+
+  // const id = register(componentPath, tagName, cache, hasRegisterCache)
+
 }
 
 /**
@@ -266,6 +403,7 @@ injectDefinition()
 module.exports = {
     behavior,
     load,
+    loadMpx,
     render,
     match,
     sleep,

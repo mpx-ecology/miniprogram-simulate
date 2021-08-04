@@ -60,9 +60,12 @@
     "webpack-cli": "^3.3.10"
   },
   "dependencies": {
+    "async": "^2.6.0",
     "csso": "^3.5.1",
     "j-component": "^1.4.2",
+    "json5": "^2.1.3",
     "less": "^3.10.3",
+    "loader-utils": "^1.1.0",
     "miniprogram-compiler": "latest",
     "postcss": "^7.0.23"
   }
