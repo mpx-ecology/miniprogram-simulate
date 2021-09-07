@@ -2,20 +2,18 @@ const JSON5 = require('json5')
 const parseComponent = require('./parser')
 const createHelpers = require('./helpers')
 const loaderUtils = require('loader-utils')
-const InjectDependency = require('./dependency/InjectDependency')
 const parseRequest = require('./utils/parse-request')
 const matchCondition = require('./utils/match-condition')
 const fixUsingComponent = require('./utils/fix-using-component')
 const addQuery = require('./utils/add-query')
 const async = require('async')
-const processJSON = require('./web/processJSON')
-const processScript = require('./web/processScript')
-const processStyles = require('./web/processStyles')
-const processTemplate = require('./web/processTemplate')
 const readJsonForSrc = require('./utils/read-json-for-src')
 const normalize = require('./utils/normalize')
 const templateCompiler = require('./template-compiler/index')
-const getMainCompilation = require('./utils/get-main-compilation')
+
+const mkdirp = require('mkdirp')
+const fs = require('fs')
+const getDirName = require('path').dirname
 
 module.exports = function (content, resource, cb) {
   this.resource = resource
@@ -92,6 +90,20 @@ module.exports = function (content, resource, cb) {
     loaderIndex: 0,
     resource
   }
+
+  function writeFile(path, contents, cb) {
+    return new Promise((resolve) => {
+      mkdirp(getDirName(path), function (err) {
+        if (err) return cb(err);
+
+        fs.writeFile(path, contents, () => {
+          cb && cb()
+          resolve()
+        });
+      });
+    })
+  }
+
   const stringifyRequest = r => loaderUtils.stringifyRequest(loaderContext, r)
   const isProduction = this.minimize || process.env.NODE_ENV === 'production'
   const options = loaderUtils.getOptions(this) || {}
@@ -153,7 +165,7 @@ module.exports = function (content, resource, cb) {
         return callback(null, vueContentCache.get(filePath))
       }
       // 只有ali才可能需要scoped
-      const hasScoped = (parts.styles.some(({scoped}) => scoped) || autoScope) && mode === 'ali'
+      const hasScoped = false
       const templateAttrs = parts.template && parts.template.attrs
       const hasComment = templateAttrs && templateAttrs.comments
       const isNative = false
@@ -194,106 +206,6 @@ module.exports = function (content, resource, cb) {
         isNative,
         projectRoot
       })
-
-      // 处理mode为web时输出vue格式文件
-      if (mode === 'web') {
-        if (ctorType === 'app' && !queryObj.app) {
-          const request = addQuery(this.resource, {app: true})
-          output += `
-      import App from ${stringifyRequest(request)}
-      import Vue from 'vue'
-      new Vue({
-        el: '#app',
-        render: function(h){
-          return h(App)
-        }
-      })\n
-      `
-          // 直接结束loader进入parse
-          this.loaderIndex = -1
-          return callback(null, output)
-        }
-
-        return async.waterfall([
-          (callback) => {
-            async.parallel([
-              (callback) => {
-                processTemplate(parts.template, {
-                  hasComment,
-                  isNative,
-                  mode,
-                  srcMode,
-                  defs,
-                  loaderContext,
-                  moduleId,
-                  ctorType,
-                  usingComponents,
-                  componentGenerics,
-                  decodeHTMLText: mpx.decodeHTMLText,
-                  externalClasses: mpx.externalClasses,
-                  checkUsingComponents: mpx.checkUsingComponents
-                }, callback)
-              },
-              (callback) => {
-                processStyles(parts.styles, {
-                  ctorType,
-                  autoScope
-                }, callback)
-              },
-              (callback) => {
-                processJSON(parts.json, {
-                  mode,
-                  env,
-                  defs,
-                  resolveMode,
-                  loaderContext,
-                  pagesMap,
-                  pagesEntryMap: mpx.pagesEntryMap,
-                  pathHash: mpx.pathHash,
-                  componentsMap,
-                  projectRoot
-                }, callback)
-              }
-            ], (err, res) => {
-              callback(err, res)
-            })
-          },
-          ([templateRes, stylesRes, jsonRes], callback) => {
-            output += templateRes.output
-            output += stylesRes.output
-            output += jsonRes.output
-            if (ctorType === 'app' && jsonRes.jsonObj.window && jsonRes.jsonObj.window.navigationBarTitleText) {
-              mpx.appTitle = jsonRes.jsonObj.window.navigationBarTitleText
-            }
-
-            processScript(parts.script, {
-              ctorType,
-              srcMode,
-              loaderContext,
-              isProduction,
-              getRequireForSrc,
-              i18n,
-              componentGenerics,
-              projectRoot,
-              jsonConfig: jsonRes.jsonObj,
-              componentId: queryObj.componentId || '',
-              tabBarMap: jsonRes.tabBarMap,
-              tabBarStr: jsonRes.tabBarStr,
-              builtInComponentsMap: templateRes.builtInComponentsMap,
-              genericsInfo: templateRes.genericsInfo,
-              wxsModuleMap: templateRes.wxsModuleMap,
-              localComponentsMap: jsonRes.localComponentsMap,
-              localPagesMap: jsonRes.localPagesMap,
-              forceDisableBuiltInLoader: mpx.forceDisableBuiltInLoader
-            }, callback)
-          }
-        ], (err, scriptRes) => {
-          if (err) return callback(err)
-          output += scriptRes.output
-          vueContentCache.set(filePath, output)
-          callback(null, output)
-        })
-      }
 
       // 触发webpack global var 注入
       output += 'global.currentModuleId\n'
@@ -449,7 +361,7 @@ module.exports = function (content, resource, cb) {
       const template = parts.template
 
       if (template) {
-        // template 部分这里直接走template-compiler，不支持再走 selector+webpack loader 流程
+        // template 部分这里直接走template-compiler，可不再走 selector+webpack loader 流程
         const options = {
           usingComponents,
           hasScoped,
@@ -480,6 +392,7 @@ module.exports = function (content, resource, cb) {
         // this._module.addDependency(dep)outputRes.template
       }
 
+      // fs.writeFileSync('src/components/list.jest.js', outputRes.script)
       callback(null, outputRes)
     }
   ], callback)

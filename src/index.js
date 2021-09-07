@@ -8,6 +8,13 @@ const compile = require('./compile')
 const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
 const mpxLoader = require('./mpxjs/webpack-plugin/loader')
+const requireFromString = require('require-from-string');
+// const { requireFromString } = require('require-from-memory')
+const mkdirp = require('mkdirp')
+const fs = require('fs')
+const getDirName = require('path').dirname
+
+
 
 const componentMap = {}
 let nowLoad = null
@@ -50,7 +57,10 @@ global.Component = options => {
 /**
  * behavior 构造器
  */
-global.Behavior = definition => jComponent.behavior(definition)
+global.Behavior = definition => {
+  console.log(definition)
+  return jComponent.behavior(definition)
+}
 
 /**
  * 加载 behavior
@@ -168,6 +178,8 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
   if (hasRegisterCache[componentPath]) return hasRegisterCache[componentPath]
   hasRegisterCache[componentPath] = id
 
+  const jsonContent = JSON.parse(componentContent.json.content)
+
   const component = {
     id,
     path: componentPath,
@@ -192,7 +204,6 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     const value = usingComponents[key]
     const usingPath = _.isAbsolute(value) ? path.join(rootPath, value) : path.join(path.dirname(componentPath), value)
     const id = register(usingPath, key, cache, hasRegisterCache)
-
     usingComponents[key] = id
   }
   Object.assign(usingComponents, overrideUsingComponents)
@@ -262,6 +273,19 @@ function load(componentPath, tagName, options = {}) {
     return id
 }
 
+function writeFile(path, contents, cb) {
+  return new Promise((resolve) => {
+    mkdirp(getDirName(path), function (err) {
+      if (err) return cb(err);
+
+      fs.writeFile(path, contents, () => {
+        cb && cb()
+        resolve()
+      });
+    });
+  })
+}
+
 /**
  * 加载 Mpx 组件
  * @param componentPath
@@ -298,20 +322,33 @@ function loadMpx(componentPath, callback, tagName, options = {}) {
   // mock webpack 以及 mpx 相关对象
   this.cacheable = () => {}
   let id = null
-  mpxLoader.call(this, content, componentPath, (output) => {
+  mpxLoader.call(this, content, componentPath, async (output) => {
     id = registerMpx(componentPath, tagName, cache, hasRegisterCache, output)
 
-    cache.needRunJsList.forEach(item => {
+    for (const item of cache.needRunJsList) {
       const oldLoad = nowLoad
 
       nowLoad = item[1] // nowLoad 用于执行用户代码调用 Component 构造器时注入额外的参数给 j-component
       nowLoad.pathToIdMap = hasRegisterCache
-      _.runJs('src/components/list.js')
+      // const res = require("@babel/core").transformSync(output.script, {
+      //   plugins: ["@babel/plugin-transform-modules-commonjs"],
+      // });
+      const realJSPath = componentPath.split('.')[0] + '.jest.js'
 
+      // fs.writeFileSync(realJSPath, output.script)
+      // await writeFile(realJSPath, output.script)
+      _.runJs(realJSPath)
+      // nowLoad = oldLoad
+      // callback(id)
+
+      // nowLoad = oldLoad
+      // callback(id)
+      // fs.writeFileSync('test/src/', output.script)
+      // requireFromString(res.code, componentPath)
       nowLoad = oldLoad
-    })
+      callback(id)
+    }
 
-    callback(id)
   })
 
   // const id = register(componentPath, tagName, cache, hasRegisterCache)

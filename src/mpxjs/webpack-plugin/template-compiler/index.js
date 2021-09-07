@@ -1,9 +1,7 @@
 const compiler = require('./compiler')
 const loaderUtils = require('loader-utils')
 const bindThis = require('./bind-this').transform
-const InjectDependency = require('../dependency/InjectDependency')
 const parseRequest = require('../utils/parse-request')
-const getMainCompilation = require('../utils/get-main-compilation')
 const matchCondition = require('../utils/match-condition')
 const path = require('path')
 
@@ -17,7 +15,6 @@ module.exports = function (raw, outputRes, options) {
         main: {}
       },
       pagesMap: {},
-      componentsMap: {},
       usingComponents: {},
       mode: 'wx',
       srcMode: 'wx'
@@ -116,9 +113,6 @@ ${e.stack}`)
   // todo 此处在loader中往其他模块addDep更加危险，考虑修改为通过抽取后的空模块的module.exports来传递信息
   let globalInjectCode = renderResult.code + '\n'
 
-  if (mode === 'tt' && renderResult.propKeys) {
-    globalInjectCode += `global.currentInject.propKeys = ${JSON.stringify(renderResult.propKeys)};\n`
-  }
 
   if (meta.computed) {
     globalInjectCode += bindThis(`global.currentInject.injectComputed = {
