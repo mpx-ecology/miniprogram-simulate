@@ -1,5 +1,5 @@
 {
-  "name": "miniprogram-simulate",
+  "name": "@mpxjs/miniprogram-simulate",
   "version": "1.4.0",
   "description": "tools for miniprogram custom component unit test",
   "main": "index.js",
