@@ -314,7 +314,7 @@ function requireCached(_module){
   delete require.cache[require.resolve(_module)];
   return require(_module)
 }
-function loadMpx(componentPath, jest, tagName, options = {}) {
+function loadMpx(componentPath, tagName, options = {}) {
   if (typeof tagName === 'object') {
     options = tagName
     tagName = ''
@@ -342,7 +342,6 @@ function loadMpx(componentPath, jest, tagName, options = {}) {
   this.cacheable = () => {}
   let id = null
   const componentContent = require(componentPath)
-  jest.resetModules(true)
 
   id = registerMpx(componentPath, tagName, cache, hasRegisterCache, componentContent)
   // 执行自定义组件 js
