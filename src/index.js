@@ -12,7 +12,7 @@ const mkdirp = require('mkdirp')
 const fs = require('fs')
 const getDirName = require('path').dirname
 const NodeEnvironment = require('jest-environment-node')
-const JestResolver = require('jest-resolve')
+const JestResolver = require('jest-resolve').default ? require('jest-resolve').default : require('jest-resolve')
 const nodeEnvironment = new NodeEnvironment({})
 
 nodeEnvironment.global = global
@@ -164,7 +164,7 @@ function register(componentPath, tagName, cache, hasRegisterCache) {
  */
 function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentContent) {
   // 用于 wcc 编译器使用
-  window.__webview_engine_version__ = 0.02
+  // window.__webview_engine_version__ = 0.02
 
   if (typeof componentPath === 'object') {
     // 直接传入定义对象
@@ -367,7 +367,7 @@ function loadMpx(componentPath, tagName, options = {}) {
     });
     const _require = require
     const copyRequire = (moduleName) => {
-      if (_require && _require.resolve) {
+      if (_require && _require.resolve && moduleName.includes('./')) {
         const basePath = _require.resolve(componentPath)
         const basePathDir = path.dirname(basePath) + '/'
         const absolutePath = _require.resolve(moduleName, {paths: [basePathDir]})

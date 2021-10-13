@@ -1,6 +1,6 @@
 {
   "name": "@mpxjs/miniprogram-simulate",
-  "version": "1.4.0",
+  "version": "1.4.2-0",
   "description": "tools for miniprogram custom component unit test",
   "main": "index.js",
   "types": "index.d.ts",
