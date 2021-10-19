@@ -11,9 +11,13 @@ const RequireFromString = require('@mpxjs/mpx-jest/packages/mpx2-jest/webpack-pl
 const mkdirp = require('mkdirp')
 const fs = require('fs')
 const getDirName = require('path').dirname
-const NodeEnvironment = require('jest-environment-node')
+const jsdomEnvironment = require('jest-environment-jsdom')
 const JestResolver = require('jest-resolve').default ? require('jest-resolve').default : require('jest-resolve')
-const nodeEnvironment = new NodeEnvironment({})
+const nodeEnvironment = new jsdomEnvironment({
+  testEnvironmentOptions: {
+    userAgent: ''
+  }
+})
 
 nodeEnvironment.global = global
 const resolver = new JestResolver(new Map(), {})
@@ -185,8 +189,6 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
 
   if (hasRegisterCache[componentPath]) return hasRegisterCache[componentPath]
   hasRegisterCache[componentPath] = id
-
-  const jsonContent = JSON.parse(componentContent.json.content)
 
   const component = {
     id,
@@ -361,10 +363,6 @@ function loadMpx(componentPath, tagName, options = {}) {
      * 修改cache的过程发现关于缓存的地方太多，修改起来整体流程不可控，以及缓存改动后对于整体构建速度可能会有影响，所以这里准备再次回归require from string 方式，让
      * 走node原生require的形式也都走一遍 jest transform。
      */
-
-    const res = require("@babel/core").transformSync(componentContent.script, {
-      plugins: ["@babel/plugin-transform-modules-commonjs"],
-    });
     const _require = require
     const copyRequire = (moduleName) => {
       if (_require && _require.resolve && moduleName.includes('./')) {
@@ -376,7 +374,7 @@ function loadMpx(componentPath, tagName, options = {}) {
       return _require(moduleName)
     }
     copyRequire.resolve = _require.resolve
-    requireFromString.require(res.code, componentPath, copyRequire)
+    requireFromString.require(componentContent.script, componentPath, copyRequire)
     nowLoad = oldLoad
   })
   return id
