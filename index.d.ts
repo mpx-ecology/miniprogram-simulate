@@ -28,8 +28,13 @@ export function load<
       template?: string;
     }
 ): ComponentId<TData, TProperty, TMethod>;
-export function load(componentPath: string, options?: LoadOptions): string;
 export function load(
+  componentPath: string,
+  tagName: string,
+  options?: LoadOptions
+): string;
+
+export function loadMpx(
   componentPath: string,
   tagName: string,
   options?: LoadOptions
