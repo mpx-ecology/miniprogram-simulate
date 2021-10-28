@@ -1,48 +1,43 @@
 /* global Event */
 const path = require('path')
 const jComponent = require('j-component')
-
 const _ = require('./utils')
 const wxss = require('./wxss')
 const compile = require('./compile')
 const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
 const RequireFromString = require('@mpxjs/mpx-jest/packages/mpx2-jest/webpack-plugin/require-from-string')
-const mkdirp = require('mkdirp')
-const fs = require('fs')
-const getDirName = require('path').dirname
 const jsdomEnvironment = require('jest-environment-jsdom')
 const JestResolver = require('jest-resolve').default ? require('jest-resolve').default : require('jest-resolve')
+
 const nodeEnvironment = new jsdomEnvironment({
   testEnvironmentOptions: {
     userAgent: ''
   }
 })
-
-nodeEnvironment.global = global
 const resolver = new JestResolver(new Map(), {})
 const requireFromString = new RequireFromString(resolver, {
   transform: [],
   extraGlobals: [],
   injectGlobals: true
 }, nodeEnvironment, {})
-
-
-
 const componentMap = {}
 let nowLoad = null
+
+nodeEnvironment.global = global
 
 /**
  * 自定义组件构造器
  */
 global.Component = options => {
   const component = nowLoad
+  const componentJsonUsingComponents = component.json.usingComponents
   const pathToIdMap = component.pathToIdMap
   const definition = Object.assign({
     id: component.id,
     path: component.path,
     template: component.wxml,
-    usingComponents: component.json.usingComponents,
+    usingComponents: componentJsonUsingComponents,
     tagName: component.tagName,
   }, options)
   definition.options = Object.assign({
@@ -194,7 +189,8 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     id,
     path: componentPath,
     tagName,
-    json: componentContent.json,
+    json: JSON.parse(componentContent.json.content),
+    script: componentContent.script
   }
 
   if (!component.json) {
@@ -213,15 +209,15 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
 
     const value = usingComponents[key]
     const usingPath = _.isAbsolute(value) ? path.join(rootPath, value) : path.join(path.dirname(componentPath), value)
-    const id = register(usingPath, key, cache, hasRegisterCache)
+    const compContent = require(usingPath)
+    const id = registerMpx(usingPath, key, cache, hasRegisterCache, compContent)
     usingComponents[key] = id
   }
   Object.assign(usingComponents, overrideUsingComponents)
-
+  component.json.usingComponents = usingComponents
   // 读取自定义组件的静态内容
   // component.wxml = compile.getWxml(componentPath, cache.options)
   component.wxml = componentContent.template
-  // component.wxss = wxss.getContent(`${componentPath}.wxss`)
   component.wxss = componentContent.style
 
   // 存入需要执行的自定义组件 js
@@ -235,7 +231,6 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
 
   return component.id
 }
-
 
 /**
  * 加载自定义组件
@@ -283,39 +278,12 @@ function load(componentPath, tagName, options = {}) {
   return id
 }
 
-function writeFile(path, contents, cb) {
-  return new Promise((resolve) => {
-    mkdirp(getDirName(path), function (err) {
-      if (err) return cb(err);
-
-      fs.writeFile(path, contents, () => {
-        cb && cb()
-        resolve()
-      });
-    });
-  })
-}
-
 /**
  * 加载 Mpx 组件
  * @param componentPath
  * @param tagName
  * @param options
  */
-
-function requireCached(_module){
-  var l = module.children.length;
-  for (var i = 0; i < l; i++)
-  {
-    if (module.children[i].id === require.resolve(_module))
-    {
-      module.children.splice(i, 1);
-      break;
-    }
-  }
-  delete require.cache[require.resolve(_module)];
-  return require(_module)
-}
 function loadMpx(componentPath, tagName, options = {}) {
   if (typeof tagName === 'object') {
     options = tagName
@@ -344,7 +312,6 @@ function loadMpx(componentPath, tagName, options = {}) {
   this.cacheable = () => {}
   let id = null
   const componentContent = require(componentPath)
-
   id = registerMpx(componentPath, tagName, cache, hasRegisterCache, componentContent)
   // 执行自定义组件 js
   cache.needRunJsList.forEach(item => {
@@ -374,11 +341,10 @@ function loadMpx(componentPath, tagName, options = {}) {
       return _require(moduleName)
     }
     copyRequire.resolve = _require.resolve
-    requireFromString.require(componentContent.script, componentPath, copyRequire)
+    requireFromString.require(nowLoad.script, componentPath, copyRequire)
     nowLoad = oldLoad
   })
   return id
-
 }
 
 /**
@@ -458,7 +424,6 @@ function scroll(comp, destOffset = 0, times = 20, propName = 'scrollTop') {
     dom[propName] = destOffset
   }
 }
-
 
 injectPolyfill()
 injectDefinition()
