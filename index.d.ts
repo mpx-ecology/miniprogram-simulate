@@ -30,13 +30,13 @@ export function load<
 ): ComponentId<TData, TProperty, TMethod>;
 export function load(
   componentPath: string,
-  tagName: string,
+  tagName?: string,
   options?: LoadOptions
 ): string;
 
 export function loadMpx(
   componentPath: string,
-  tagName: string,
+  tagName?: string,
   options?: LoadOptions
 ): string;
 

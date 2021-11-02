@@ -1,6 +1,7 @@
 /* global Event */
 const path = require('path')
 const jComponent = require('j-component')
+const json5 = require('json5')
 const _ = require('./utils')
 const wxss = require('./wxss')
 const compile = require('./compile')
@@ -10,21 +11,23 @@ const RequireFromString = require('@mpxjs/mpx-jest/packages/mpx2-jest/webpack-pl
 const jsdomEnvironment = require('jest-environment-jsdom')
 const JestResolver = require('jest-resolve').default ? require('jest-resolve').default : require('jest-resolve')
 
-const nodeEnvironment = new jsdomEnvironment({
+const environment = new jsdomEnvironment({
   testEnvironmentOptions: {
     userAgent: ''
   }
 })
+environment.global = global
+environment.getApp = () => {}
+
 const resolver = new JestResolver(new Map(), {})
 const requireFromString = new RequireFromString(resolver, {
   transform: [],
   extraGlobals: [],
   injectGlobals: true
-}, nodeEnvironment, {})
+}, environment, {})
 const componentMap = {}
 let nowLoad = null
 
-nodeEnvironment.global = global
 
 /**
  * 自定义组件构造器
@@ -184,12 +187,21 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
 
   if (hasRegisterCache[componentPath]) return hasRegisterCache[componentPath]
   hasRegisterCache[componentPath] = id
+  let componentJsonContent = {}
+  try{
+    if (componentContent.json && componentContent.json.content) {
+      componentJsonContent = json5.parse(componentContent.json.content)
+    }
+  } catch (e) {
+    console.log(e)
+  }
+
 
   const component = {
     id,
     path: componentPath,
     tagName,
-    json: JSON.parse(componentContent.json.content),
+    json: componentJsonContent,
     script: componentContent.script
   }
 
@@ -208,7 +220,14 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     if (Object.prototype.hasOwnProperty.call(overrideUsingComponents, key)) continue // 被 override 的跳过
 
     const value = usingComponents[key]
-    const usingPath = _.isAbsolute(value) ? path.join(rootPath, value) : path.join(path.dirname(componentPath), value)
+    const isRelativePath = /^\./.test(value)
+    let usingPath = null
+    if (isRelativePath) {
+      usingPath = require.resolve(path.join(path.dirname(componentPath), value))
+    } else {
+      usingPath = require.resolve(value)
+    }
+    // const usingPath = _.isAbsolute(value) ? path.join(rootPath, value) : path.join(path.dirname(componentPath), value)
     const compContent = require(usingPath)
     const id = registerMpx(usingPath, key, cache, hasRegisterCache, compContent)
     usingComponents[key] = id
@@ -333,7 +352,7 @@ function loadMpx(componentPath, tagName, options = {}) {
     const _require = require
     const copyRequire = (moduleName) => {
       if (_require && _require.resolve && moduleName.includes('./')) {
-        const basePath = _require.resolve(componentPath)
+        const basePath = _require.resolve(nowLoad.path)
         const basePathDir = path.dirname(basePath) + '/'
         const absolutePath = _require.resolve(moduleName, {paths: [basePathDir]})
         return _require(absolutePath)
@@ -341,7 +360,7 @@ function loadMpx(componentPath, tagName, options = {}) {
       return _require(moduleName)
     }
     copyRequire.resolve = _require.resolve
-    requireFromString.require(nowLoad.script, componentPath, copyRequire)
+    requireFromString.require(nowLoad.script, nowLoad.path, copyRequire)
     nowLoad = oldLoad
   })
   return id
