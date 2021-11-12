@@ -8,7 +8,7 @@ const compile = require('./compile')
 const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
 const RequireFromString = require('@mpxjs/mpx-jest/packages/mpx2-jest/webpack-plugin/require-from-string')
-const CustomEnvironmentJsdom = require('@mpxjs/mpx-jest/packages/mpx2-jest/webpack-plugin/custom-environment-jsdom')
+const CustomEnvironmentJsdom = require('@mpxjs/mpx-jest/packages/mpx2-jest/webpack-plugin/require-from-string/custom-environment-jsdom')
 const JestResolver = require('jest-resolve').default ? require('jest-resolve').default : require('jest-resolve')
 
 const environment = new CustomEnvironmentJsdom({
