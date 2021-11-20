@@ -3,7 +3,7 @@ const jComponent = require('j-component')
 const api = require('./api')
 
 const officialTagList = [
-    'view', 'scroll-view', 'swiper', 'swiper-item', 'movable-view', 'cover-view', 'cover-image',
+    'view', 'scroll-view', 'swiper', 'swiper-item', 'movable-view', 'movable-area', 'cover-view', 'cover-image',
     'icon', 'text', 'rich-text', 'progress',
     'button', 'checkbox', 'form', 'input', 'label', 'picker', 'picker', 'picker-view', 'radio', 'slider', 'switch', 'textarea',
     'navigator', 'function-page-navigator',
