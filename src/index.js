@@ -378,8 +378,12 @@ function render(id, properties) {
     // 注入 wxss
     wxss.insert(cache.wxss, id)
   }
+  const component = jComponent.create(id, properties)
 
-  return jComponent.create(id, properties)
+  component.instance.$t = (key) => {
+    return key
+  }
+  return component
 }
 
 /**
