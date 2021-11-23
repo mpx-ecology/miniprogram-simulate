@@ -19,6 +19,7 @@ const environment = new CustomEnvironmentJsdom({
   global
 })
 
+environment.global = global
 const resolver = new JestResolver(new Map(), {})
 const requireFromString = new RequireFromString(resolver, {
   transform: [],
@@ -62,8 +63,21 @@ global.Component = options => {
     })
   }
 
+  if (definition.methods) {
+    definition.methods.$t = (key) => {
+      return key
+    }
+  } else {
+    definition.$t = (key) => {
+      return key
+    }
+  }
+
+
   jComponent.register(definition)
 }
+
+global.Page = global.Component
 
 /**
  * behavior 构造器
@@ -378,11 +392,9 @@ function render(id, properties) {
     // 注入 wxss
     wxss.insert(cache.wxss, id)
   }
+
   const component = jComponent.create(id, properties)
 
-  component.instance.$t = (key) => {
-    return key
-  }
   return component
 }
 
