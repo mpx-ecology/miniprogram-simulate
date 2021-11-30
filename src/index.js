@@ -27,8 +27,29 @@ const requireFromString = new RequireFromString(resolver, {
   injectGlobals: true
 }, environment, {})
 const componentMap = {}
+let mockComponentMap = {}
 let nowLoad = null
 
+/**
+ * 合并两个函数
+ * @param functionA 先执行
+ * @param functionB 执行完 functionA 后返回
+ * @returns {*}
+ */
+function mergeFunction (functionA, functionB) {
+  if (!functionA || !functionB) return
+  const merge = functionB
+  functionB = (function () {
+    functionA.call(this)
+    merge.call(this)
+  })
+  return functionB
+}
+
+
+global.Behavior = definition => {
+  return jComponent.behavior(definition)
+}
 
 /**
  * 自定义组件构造器
@@ -71,6 +92,12 @@ global.Component = options => {
     definition.$t = (key) => {
       return key
     }
+  }
+
+  if (definition.methods && definition.methods.onLoad) {
+    // 可以考虑采用behaviors来实现
+    const func = mergeFunction(definition.attached, definition.methods.onLoad)
+    definition.attached = func
   }
 
 
@@ -181,6 +208,11 @@ function register(componentPath, tagName, cache, hasRegisterCache) {
 function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentContent) {
   // 用于 wcc 编译器使用
   // window.__webview_engine_version__ = 0.02
+
+  // 判断是否是mock的组件
+  if (mockComponentMap[tagName]) {
+    componentPath = mockComponentMap[tagName]
+  }
 
   if (typeof componentPath === 'object') {
     // 直接传入定义对象
@@ -429,6 +461,22 @@ function sleep(time = 0) {
 }
 
 /**
+ * mock usingComponents中的组件
+ * @param compName
+ * @param compDefinition
+ */
+function mockComponent(compName, compDefinition) {
+  mockComponentMap[compName] = compDefinition
+}
+
+/**
+ * 清除 component mock 数据
+ */
+function clearMockComponent() {
+  mockComponentMap = {}
+}
+
+/**
  * 模拟滚动
  */
 function scroll(comp, destOffset = 0, times = 20, propName = 'scrollTop') {
@@ -471,4 +519,6 @@ module.exports = {
   match,
   sleep,
   scroll,
+  mockComponent,
+  clearMockComponent
 }
