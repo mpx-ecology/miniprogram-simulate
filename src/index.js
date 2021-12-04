@@ -40,8 +40,8 @@ function mergeFunction (functionA, functionB) {
   if (!functionA || !functionB) return
   const merge = functionB
   functionB = (function () {
-    functionA.call(this)
-    merge.call(this)
+    functionA.call(this, ...arguments)
+    merge.call(this, ...arguments)
   })
   return functionB
 }
