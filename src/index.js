@@ -56,6 +56,10 @@ global.Component = options => {
     const component = nowLoad
     const componentJsonUsingComponents = component.json.usingComponents
     const pathToIdMap = component.pathToIdMap
+    // 当template 为空字符串时，强行插入'view'规避后续报错
+    if (typeof component.wxml === 'string' && component.wxml.length === 0) {
+        component.wxml = '<view></view>'
+    }
     const definition = Object.assign({
         id: component.id,
         path: component.path,
