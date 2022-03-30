@@ -93,9 +93,27 @@ global.Component = options => {
     }
 
     if (definition.methods && definition.methods.onLoad) {
-    // 可以考虑采用behaviors来实现
+        // 可以考虑采用behaviors来实现
         const func = mergeFunction(definition.attached, definition.methods.onLoad)
         definition.attached = func
+    }
+
+    if (definition.methods && definition.methods.onShow) {
+        // 可以考虑采用behaviors来实现
+        const func = mergeFunction(definition.attached, definition.methods.onShow)
+        definition.attached = func
+    }
+
+    if (definition.methods && definition.methods.onHide) {
+        // 可以考虑采用behaviors来实现
+        const func = mergeFunction(definition.detached, definition.methods.onHide)
+        definition.detached = func
+    }
+
+    if (definition.methods && definition.methods.onUnload) {
+        // 可以考虑采用behaviors来实现
+        const func = mergeFunction(definition.detached, definition.methods.onUnload)
+        definition.detached = func
     }
 
 
