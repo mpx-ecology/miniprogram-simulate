@@ -251,6 +251,9 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     try {
         if (componentContent.json && componentContent.json.content) {
             componentJsonContent = json5.parse(componentContent.json.content)
+            if (componentJsonContent.usingComponents) {
+                _.removeUsingComponentRoot(componentJsonContent.usingComponents)
+            }
         }
     } catch (e) {
         console.log(e)

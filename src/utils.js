@@ -135,6 +135,15 @@ function isAbsolute(input) {
     return /^(\/|\\|([a-zA-Z]:[/\\]))/.test(input)
 }
 
+function removeUsingComponentRoot(usingComponent) {
+    const keys = Object.keys(usingComponent)
+    keys.forEach(key => {
+        if (usingComponent[key].includes('?root')) {
+            usingComponent[key] = usingComponent[key].split('?root')[0]
+        }
+    })
+}
+
 module.exports = {
     getEnv,
     setNodeJsEnv,
@@ -146,4 +155,5 @@ module.exports = {
     getCompiler,
     getId,
     isAbsolute,
+    removeUsingComponentRoot
 }
