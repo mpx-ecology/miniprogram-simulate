@@ -104,9 +104,21 @@ global.Component = options => {
         definition.attached = func
     }
 
+    if (definition.pageShow) {
+        // 可以考虑采用behaviors来实现
+        const func = mergeFunction(definition.attached, definition.pageShow)
+        definition.attached = func
+    }
+
     if (definition.methods && definition.methods.onHide) {
         // 可以考虑采用behaviors来实现
         const func = mergeFunction(definition.detached, definition.methods.onHide)
+        definition.detached = func
+    }
+
+    if (definition.pageHide) {
+        // 可以考虑采用behaviors来实现
+        const func = mergeFunction(definition.detached, definition.pageHide)
         definition.detached = func
     }
 
