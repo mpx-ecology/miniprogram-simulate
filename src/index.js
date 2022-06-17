@@ -285,7 +285,6 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     }
 
     // 先加载 using components
-    const rootPath = cache.options.rootPath
     const usingComponents = component.json.usingComponents || {}
     const overrideUsingComponents = cache.options.usingComponents || {}
     const usingComponentKeys = Object.keys(usingComponents)
@@ -311,7 +310,7 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     component.json.usingComponents = usingComponents
     // 读取自定义组件的静态内容
     // component.wxml = compile.getWxml(componentPath, cache.options)
-    component.wxml = componentContent.template
+    component.wxml = componentContent.template && componentContent.template.replace(/{{{(.*)}}}/, '{{$1}}')
     component.wxss = componentContent.style
 
     // 存入需要执行的自定义组件 js
