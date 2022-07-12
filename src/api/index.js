@@ -193,7 +193,19 @@ module.exports = {
 
     // data
     ...dataApi,
-
+    // 应用级事件
+    onAppShow(callback) {
+        callback({
+            path: '',
+            scene: 0,
+            query: {},
+            shareTicket: '',
+            referrerInfo: {},
+            forwardMaterials: [{}],
+            chatType: 0,
+            apiCategory: ''
+        })
+    },
     // location
     chooseLocation(options = {}) {
         _.runInAsync(options, {
