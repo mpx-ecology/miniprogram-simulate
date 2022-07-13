@@ -2,14 +2,16 @@
 const path = require('path')
 const jComponent = require('j-component')
 const json5 = require('json5')
-const RequireFromString = require('@mpxjs/mpx-jest/require-from-string')
 const CustomEnvironmentJsdom = require('@mpxjs/mpx-jest/require-from-string/custom-environment-jsdom')
 const _ = require('./utils')
 const wxss = require('./wxss')
 const compile = require('./compile')
 const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
-const JestResolver = require('jest-resolve').default ? require('jest-resolve').default : require('jest-resolve')
+const {
+    stringifyClass,
+    stringifyStyle
+} = require('./wxs')
 
 const environment = new CustomEnvironmentJsdom({
     testEnvironmentOptions: {
@@ -20,12 +22,6 @@ const environment = new CustomEnvironmentJsdom({
 })
 
 environment.global = global
-const resolver = new JestResolver(new Map(), {})
-const requireFromString = new RequireFromString(resolver, {
-    transform: [],
-    extraGlobals: [],
-    injectGlobals: true
-}, environment, {})
 const componentMap = {}
 let mockComponentMap = {}
 let nowLoad = null
@@ -138,6 +134,14 @@ global.Page = global.Component
  * behavior 构造器
  */
 global.Behavior = definition => jComponent.behavior(definition)
+
+/**
+ * __stringify__ wxs 方法注入
+ */
+global.__stringify__ = {
+    stringifyClass,
+    stringifyStyle
+}
 
 /**
  * 加载 behavior
