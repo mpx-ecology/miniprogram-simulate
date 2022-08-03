@@ -423,38 +423,6 @@ function loadMpx(componentPath, tagName, options = {}) {
     const componentContent = require(componentPath)
     id = registerMpx(componentPath, tagName, cache, hasRegisterCache, componentContent)
     // 执行自定义组件 js
-    // cache.needRunJsList.forEach(item => {
-    //     const oldLoad = nowLoad
-    //
-    //     nowLoad = item[1] // nowLoad 用于执行用户代码调用 Component 构造器时注入额外的参数给 j-component
-    //     nowLoad.pathToIdMap = hasRegisterCache
-    //     /**
-    //  *  这里要require一个js文件，但是js文件内容目前存在于内存中，直接require文件是会报找不到文件错误，但是如果要走require from string，则又面临jest runtime中
-    //  *  暂时不支持 es module 规范的问题，势必需要先经过 babel transform-esModule-to-commonjs，怎么保证所有文件都经过babel处理又是一个问题。
-    //  */
-    //     /**
-    //  * 这里的解决方案为，当require 一个 mpx文件之后，把对应的cache删除，再次走require进入jest-mpx中，return出script对应的content来实现js部分run的效果
-    //  * 在删除cache时发现，jest是自己实现的moduleRequire, require.cache 并不是一个对象, 而是一个 Proxy，这里删除cache又费了一番功夫
-    //  *
-    //  * 修改cache的过程发现关于缓存的地方太多，修改起来整体流程不可控，以及缓存改动后对于整体构建速度可能会有影响，所以这里准备再次回归require from string 方式，让
-    //  * 走node原生require的形式也都走一遍 jest transform。
-    //  */
-    //     const _require = require
-    //     const copyRequire = (moduleName) => {
-    //         if (_require && _require.resolve && moduleName.includes('./')) {
-    //             const basePath = _require.resolve(nowLoad.path)
-    //             const basePathDir = path.dirname(basePath) + '/'
-    //             const absolutePath = _require.resolve(moduleName, {paths: [basePathDir]})
-    //             return _require(absolutePath)
-    //         }
-    //         return _require(moduleName)
-    //     }
-    //     copyRequire.resolve = _require.resolve
-    //     requireFromString.require(nowLoad.script, nowLoad.path, copyRequire)
-    //     nowLoad = oldLoad
-    // })
-
-    // 执行自定义组件 js
     cache.needRunJsList.forEach(item => {
       const oldLoad = nowLoad
 
