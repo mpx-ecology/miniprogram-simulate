@@ -8,6 +8,7 @@ const wxss = require('./wxss')
 const compile = require('./compile')
 const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
+const fs = require('fs')
 const {
     stringifyClass,
     stringifyStyle
@@ -142,6 +143,11 @@ global.__stringify__ = {
     stringifyClass,
     stringifyStyle
 }
+/**
+ * __stringify__ wxs 内容注入，用于 template 赋值时替换 wxs src 写法方式
+ */
+global.stringify_wxs = fs.readFileSync(path.join(__dirname, './wxs.js'), 'utf-8')
+
 
 /**
  * 加载 behavior
@@ -314,7 +320,13 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     component.json.usingComponents = usingComponents
     // 读取自定义组件的静态内容
     // component.wxml = compile.getWxml(componentPath, cache.options)
-    component.wxml = componentContent.template && componentContent.template.replace(/{{{(.*)}}}/, '{{$1}}')
+    let template = componentContent.template && componentContent.template.replace(/{{{(.*)}}}/, '{{$1}}')
+    if (/\<wxs.*\/wxs\>/.test(template)) {
+        // 使用 src路径写法时，在后续编译中找不到 wxs 内容，导致 class 丢失
+        template = template.replace(/\<wxs.*\/wxs\>/, '')
+        template = `<wxs module="__stringify__">${global.stringify_wxs}</wxs>` + template
+    }
+    component.wxml = template
     component.wxss = componentContent.style
 
     // 存入需要执行的自定义组件 js
