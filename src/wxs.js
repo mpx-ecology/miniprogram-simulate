@@ -3,7 +3,7 @@ function objectKeys (obj) {
 }
 
 function genRegExp (str, flags) {
-    if (!__mpx_wxs__) {
+    if (true) {
         return new RegExp(str, flags)
     } else {
         return getRegExp(str, flags)
@@ -28,7 +28,7 @@ function isObject (obj) {
 }
 
 function isArray (arr) {
-    if (!__mpx_wxs__) {
+    if (true) {
         return Array.isArray(arr)
     } else {
         return arr && arr.constructor === 'Array'
@@ -188,7 +188,6 @@ module.exports = {
         return concat(staticClass, mpEscape(stringifyDynamicClass(dynamicClass)))
     },
     s: function (staticStyle, dynamicStyle) {
-        console.log('__s_s wxs trigger____', staticStyle, dynamicStyle)
         var normalizedDynamicStyle = normalizeDynamicStyle(dynamicStyle)
         var parsedStaticStyle = typeof staticStyle === 'string' ? parseStyleText(staticStyle) : {}
         return genStyleText(extend(parsedStaticStyle, normalizedDynamicStyle))
