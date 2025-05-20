@@ -1,64 +1,113 @@
-
-function objectKeys(obj) {
+function objectKeys (obj) {
     return Object.keys(obj)
 }
 
-function genRegExp(str, flags) {
-    return new RegExp(str, flags)
+function genRegExp (str, flags) {
+    if (!__mpx_wxs__) {
+        return new RegExp(str, flags)
+    } else {
+        return getRegExp(str, flags)
+    }
 }
 
-const mpxDashReg = genRegExp('(.+)MpxDash$')
-// 转义字符在wxs正则中存在平台兼容性问题，用[$]规避使用转义字符
-const mpxDashReplaceReg = genRegExp('[$]', 'g')
-
-function extend(target, from) {
-    const fromKeys = objectKeys(from)
-    for (let i = 0; i < fromKeys.length; i++) {
-        const key = fromKeys[i]
+function extend (target, from) {
+    var fromKeys = objectKeys(from)
+    for (var i = 0; i < fromKeys.length; i++) {
+        var key = fromKeys[i]
         target[key] = from[key]
     }
     return target
 }
 
-function concat(a, b) {
-    // eslint-disable-next-line no-nested-ternary
+function concat (a, b) {
     return a ? b ? (a + ' ' + b) : a : (b || '')
 }
 
-function isObject(obj) {
+function isObject (obj) {
     return obj !== null && typeof obj === 'object'
 }
 
-function likeArray(arr) {
-    return Array.isArray(arr)
+function isArray (arr) {
+    if (!__mpx_wxs__) {
+        return Array.isArray(arr)
+    } else {
+        return arr && arr.constructor === 'Array'
+    }
 }
 
-function isDef(v) {
-    return v !== undefined && v !== null
+var escapeMap = {
+    '(': '_pl_',
+    ')': '_pr_',
+    '[': '_bl_',
+    ']': '_br_',
+    '{': '_cl_',
+    '#': '_h_',
+    '!': '_i_',
+    '/': '_s_',
+    '.': '_d_',
+    ':': '_c_',
+    ',': '_2c_',
+    '%': '_p_',
+    // wxs can not use '\'' as key
+    // wxs环境中'\''!=="'"，此文件不能格式化，否则会导致程序错误
+    "'": '_q_',
+    // wxs can not use '"' as key
+    '"': '_dq_',
+    '+': '_a_',
+    '$': '_si_'
 }
 
-function stringifyArray(value) {
-    let res = ''
-    let stringified
-    for (let i = 0; i < value.length; i++) {
-        // eslint-disable-next-line no-use-before-define,no-cond-assign
-        if (isDef(stringified = stringifyDynamicClass(value[i])) && stringified !== '') {
+var escapeReg = genRegExp('[()[\]{}#!/.:,%\'"+$]', 'g')
+
+function mpEscape (str) {
+    return str.replace(escapeReg, function (match) {
+        if (escapeMap[match]) return escapeMap[match]
+        // fix wxs can not use '}' as key
+        if (match === '}') return '_cr_'
+        // unknown escaped
+        return '_u_'
+    })
+}
+
+function stringifyDynamicClass (value) {
+    if (isArray(value)) {
+        value = stringifyArray(value)
+    } else if (isObject(value)) {
+        value = stringifyObject(value)
+    }
+
+    if (typeof value === 'string') {
+        return value
+    } else {
+        return ''
+    }
+}
+
+function stringifyArray (value) {
+    var res = ''
+    var classString
+    for (var i = 0; i < value.length; i++) {
+        if ((classString = stringifyDynamicClass(value[i]))) {
             if (res) res += ' '
-            res += stringified
+            res += classString
         }
     }
     return res
 }
 
-function stringifyObject(value) {
-    let res = ''
-    const objKeys = objectKeys(value)
-    for (let i = 0; i < objKeys.length; i++) {
-        let key = objKeys[i]
+var mpxEscapeReg = genRegExp('(.+)MpxEscape$')
+var dashEscapeReg = genRegExp('_da_', 'g')
+var spaceEscapeReg = genRegExp('_sp_', 'g')
+
+function stringifyObject (value) {
+    var res = ''
+    var objKeys = objectKeys(value)
+    for (var i = 0; i < objKeys.length; i++) {
+        var key = objKeys[i]
         if (value[key]) {
             if (res) res += ' '
-            if (mpxDashReg.test(key)) {
-                key = mpxDashReg.exec(key)[1].replace(mpxDashReplaceReg, '-')
+            if (mpxEscapeReg.test(key)) {
+                key = mpxEscapeReg.exec(key)[1].replace(dashEscapeReg, '-').replace(spaceEscapeReg, ' ')
             }
             res += key
         }
@@ -66,45 +115,31 @@ function stringifyObject(value) {
     return res
 }
 
-function stringifyDynamicClass(value) {
-    if (!value) return ''
-    if (likeArray(value)) {
-        return stringifyArray(value)
-    }
-    if (isObject(value)) {
-        return stringifyObject(value)
-    }
-    if (typeof value === 'string') {
-        return value
-    }
-    return ''
-}
-
-function hump2dash(value) {
-    const reg = genRegExp('[A-Z]', 'g')
-    return value.replace(reg, function(match) {
+function hump2dash (value) {
+    var reg = genRegExp('[A-Z]', 'g')
+    return value.replace(reg, function (match) {
         return '-' + match.toLowerCase()
     })
 }
 
-function dash2hump(value) {
-    const reg = genRegExp('-([a-z])', 'g')
-    return value.replace(reg, function(match, p1) {
+function dash2hump (value) {
+    var reg = genRegExp('-([a-z])', 'g')
+    return value.replace(reg, function (match, p1) {
         return p1.toUpperCase()
     })
 }
 
-function parseStyleText(cssText) {
-    const res = {}
-    const listDelimiter = genRegExp(';(?![^(]*[)])', 'g')
-    const propertyDelimiter = genRegExp(':(.+)')
-    const arr = cssText.split(listDelimiter)
-    for (let i = 0; i < arr.length; i++) {
-        const item = arr[i]
+function parseStyleText (cssText) {
+    var res = {}
+    var listDelimiter = genRegExp(';(?![^(]*[)])', 'g')
+    var propertyDelimiter = genRegExp(':(.+)')
+    var arr = cssText.split(listDelimiter)
+    for (var i = 0; i < arr.length; i++) {
+        var item = arr[i]
         if (item) {
-            const tmp = item.split(propertyDelimiter)
+            var tmp = item.split(propertyDelimiter)
             if (tmp.length > 1) {
-                const k = dash2hump(tmp[0].trim())
+                var k = dash2hump(tmp[0].trim())
                 res[k] = tmp[1].trim()
             }
         }
@@ -112,21 +147,21 @@ function parseStyleText(cssText) {
     return res
 }
 
-function genStyleText(styleObj) {
-    let res = ''
-    const objKeys = objectKeys(styleObj)
+function genStyleText (styleObj) {
+    var res = ''
+    var objKeys = objectKeys(styleObj)
 
-    for (let i = 0; i < objKeys.length; i++) {
-        const key = objKeys[i]
-        const item = styleObj[key]
+    for (var i = 0; i < objKeys.length; i++) {
+        var key = objKeys[i]
+        var item = styleObj[key]
         res += hump2dash(key) + ':' + item + ';'
     }
     return res
 }
 
-function mergeObjectArray(arr) {
-    const res = {}
-    for (let i = 0; i < arr.length; i++) {
+function mergeObjectArray (arr) {
+    var res = {}
+    for (var i = 0; i < arr.length; i++) {
         if (arr[i]) {
             extend(res, arr[i])
         }
@@ -134,9 +169,9 @@ function mergeObjectArray(arr) {
     return res
 }
 
-function normalizeDynamicStyle(value) {
+function normalizeDynamicStyle (value) {
     if (!value) return {}
-    if (likeArray(value)) {
+    if (isArray(value)) {
         return mergeObjectArray(value)
     }
     if (typeof value === 'string') {
@@ -146,15 +181,16 @@ function normalizeDynamicStyle(value) {
 }
 
 module.exports = {
-    stringifyClass(staticClass, dynamicClass) {
+    c: function (staticClass, dynamicClass) {
         if (typeof staticClass !== 'string') {
             return console.log('Template attr class must be a string!')
         }
-        return concat(staticClass, stringifyDynamicClass(dynamicClass))
+        return concat(staticClass, mpEscape(stringifyDynamicClass(dynamicClass)))
     },
-    stringifyStyle(staticStyle, dynamicStyle) {
-        const normalizedDynamicStyle = normalizeDynamicStyle(dynamicStyle)
-        const parsedStaticStyle = typeof staticStyle === 'string' ? parseStyleText(staticStyle) : {}
+    s: function (staticStyle, dynamicStyle) {
+        console.log('__s_s wxs trigger____', staticStyle, dynamicStyle)
+        var normalizedDynamicStyle = normalizeDynamicStyle(dynamicStyle)
+        var parsedStaticStyle = typeof staticStyle === 'string' ? parseStyleText(staticStyle) : {}
         return genStyleText(extend(parsedStaticStyle, normalizedDynamicStyle))
     }
 }

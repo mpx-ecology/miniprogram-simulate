@@ -139,7 +139,7 @@ global.Behavior = definition => jComponent.behavior(definition)
 /**
  * __stringify__ wxs 方法注入
  */
-global.__stringify__ = {
+global._s = {
     stringifyClass,
     stringifyStyle
 }
@@ -324,7 +324,7 @@ function registerMpx(componentPath, tagName, cache, hasRegisterCache, componentC
     if (/\<wxs.*\/wxs\>/.test(template)) {
         // 使用 src路径写法时，在后续编译中找不到 wxs 内容，导致 class 丢失
         template = template.replace(/\<wxs.*\/wxs\>/, '')
-        template = `<wxs module="__stringify__">${global.stringify_wxs}</wxs>` + template
+        template = `<wxs module="_s">${global.stringify_wxs}</wxs>` + template
     }
     component.wxml = template
     component.wxss = componentContent.style
