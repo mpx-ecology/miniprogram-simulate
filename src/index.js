@@ -10,8 +10,8 @@ const injectPolyfill = require('./polyfill')
 const injectDefinition = require('./definition')
 const fs = require('fs')
 const {
-    stringifyClass,
-    stringifyStyle
+    c,
+    s
 } = require('./wxs')
 
 const environment = new CustomEnvironmentJsdom({
@@ -137,17 +137,21 @@ global.Page = global.Component
 global.Behavior = definition => jComponent.behavior(definition)
 
 /**
- * __stringify__ wxs 方法注入
+ * _s wxs 方法注入
  */
 global._s = {
-    stringifyClass,
-    stringifyStyle
+    c,
+    s
 }
 /**
  * __stringify__ wxs 内容注入，用于 template 赋值时替换 wxs src 写法方式
  */
 global.stringify_wxs = fs.readFileSync(path.join(__dirname, './wxs.js'), 'utf-8')
 
+/**
+ * 注入 mpxGlobal 构造器
+ */
+global.mpxGlobal = Object.create(global)
 
 /**
  * 加载 behavior
